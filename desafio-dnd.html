@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi semana de estudio</title>
+    <!--Si se borra el sortable, dara error porque el navegador ejecuta la linea y no sabe que es Sortable, por otro lado, no nos permitiria mover nada y no funcionaria en el celular-->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <style>
+        body {font-family: sans-serif;background: #f2f2f2;padding: 20px;}
+        .tablero {display: flex; gap: 16px;flex-wrap: wrap;}
+        .columna {background: #ddd;border-radius: 8px;padding: 10px;width: 220px;}
+        .columna h3 {margin: 0 0 8px;font-size: 1rem; }.lista {list-style: none;padding: 0;margin: 0;min-height: 80px; }
+        .lista li {background: white;padding: 10px;margin-bottom: 6px;border-radius: 6px;cursor: grab; }
+        .fantasma { opacity: 0.4; background: #c8e6c9; } /* Animaciones a los blques */
+        .elegida { box-shadow: 0 6px 14px rgba(0,0,0,0.3); }
+        .lista li { cursor: default; }/* esto lo que hace es permitir que los elementos de la lista sean clickeables */
+        .asa { cursor: grab; color: #999; margin-right: 8px; }
+        .error-mover { background: #ffcccc !important; }
+        .sobrecargado {background: #ffcdd2 !important;border: 2px solid #e53935;}
+    </style>
+</head>
+<body>
+    <h1>Mi semana de estudio</h1>
+    <div class="tablero">
+        <div class="columna">
+            <h3>Papelera</h3>
+            <ul class="lista" id="papelera" style="border: 2px dashed red;"></ul>
+        </div>
+        <p id="mensaje"></p>
+        <div class="columna">
+            <h3>Actividades</h3>
+            <ul class="lista" id="banco">
+                <li data-horas="2"><span class="asa">⠿</span>Repasar base de datos (2 h)</li>
+                <li data-horas="1"><span class="asa">⠿</span>Taller de frontend (1 h)</li>
+                <li data-horas="1"><span class="asa">⠿</span>Estudiar sustentacion frontend (1 h)</li>
+                <li data-horas="3"><span class="asa">⠿</span>Proyecto Procesos de investigacion (3 h)</li>
+                <li data-horas="1"><span class="asa">⠿</span>Taller de frontend (1 h)</li>
+                <li data-horas="1"><span class="asa">⠿</span>Taller de bases de datos (1 h)</li>
+            </ul>
+        </div>
+
+        <!--Cada uno tiene dos clases, separadas por un espacio: "lista dia". Eso significa que ese elemento tiene ambas clases a la vez: lista y dia. No es una clase compuesta llamada "lista dia", son dos clases independientes puestas juntas en el mismo atributo.-->
+        <div class="columna">
+            <h3>Lunes <span class="total"></span></h3>
+            <ul class="lista dia" id="lunes">
+                <li class="fija" data-horas="2"><span class="asa">⠿</span> Clase de Redes LAN (2 h)</li>
+            </ul>
+        </div>
+        <div class="columna">
+            <h3>Martes <span class="total"></span></h3>
+            <ul class="lista dia" id="martes">
+                <li class="fija" data-horas="1"><span class="asa">⠿</span> Partido UAM (1 h)</li>
+            </ul>
+        </div>
+        <div class="columna">
+            <h3>Miercoles <span class="total"></span></h3>
+            <ul class="lista dia" id="miercoles"></ul>
+        </div>
+        <div class="columna">
+            <h3>Jueves <span class="total"></span></h3>
+            <ul class="lista dia" id="jueves"></ul>
+        </div>
+        <div class="columna">
+            <h3>Viernes <span class="total"></span></h3>
+            <ul class="lista dia" id="viernes"></ul>
+        </div>
+    </div>
+    <script>
+        const banco = document.getElementById("banco");
+        //new Sortable(banco); // Recibe un contenedor UL, no cada LI por separado, los hijos se hacen arrastrables automaticamente
+        //const listas = document.querySelectorAll(".lista"); //Solo toma todo lo que tenga la clase lista
+        const listas = document.querySelectorAll(".dia");
+        const dias = document.querySelectorAll(".dia");
+
+        function actualizarHoras() {
+            dias.forEach((dia) => {
+                let horas = 0;
+                for (const actividad of dia.children) {//es como un loop que recorre los hijos del dia
+                    horas += Number(actividad.dataset.horas); //con .dataset.horas accedés a ese valor. del data-horas='#' que hay en los LI
+                    //Number convierte eso a un numero real, porque si sumamos dos string, por ejemplo "2" + "3" = "23", no 5
+                }
+                dia.parentElement.classList.toggle("sobrecargado", horas > 4);
+                dia.parentElement.querySelector(".total").textContent = `(${horas} h)`;
+            });
+        }
+
+        new Sortable(document.getElementById("banco"), {
+            group: { name: "semana", pull: "clone", put: false }, //Group es un objeto ahora, el clone saca el original al arrastrarlo y saca una copia,  el false indica que no se puede meter nada al banco
+            sort: false,
+            animation: 200,
+            handle: ".asa",
+            onEnd: actualizarHoras //pasamos directamente el nombre de la funcion, no necesita ningun datodel evento para actualizar las horas
+        });
+
+        new Sortable(document.getElementById("papelera"), {
+            group: { name: "semana", pull: false, put: true },
+            onAdd: (evt) => {//Cuando se agrega algo, el evento se dispara
+                evt.item.remove();
+                actualizarHoras();//si se borra un elemento, hay que actualizar las horas de la columna de origen, porque se borro un elemento
+            }
+        });
+
+        listas.forEach((lista) => {
+            /*
+            let nombreGrupo = "semana"; // valor por defecto para todas las listas, el grupo actua como contrasena
+
+            //group no bloquea el drag & drop en general 
+            //solo bloquea el intercambio de elementos entre listas distintas cuando sus nombres de grupo no coinciden
+            if (lista.id === "martes") {
+                nombreGrupo = "otro"; // excepción solo para martes
+            }
+            */
+            new Sortable(lista, {
+                //group: "semana",//nombreGrupo,
+                //Nota extra:
+                group: {
+                    name: "semana",
+                    put: function (to) {//to es el objeto sortable de la lista de destino
+                        return to.el.children.length < 5; //to.el propiedad definida de sortableJS que guarda el <ul> real
+                    }
+                },
+                animation: 200,
+                ghostClass: "fantasma",
+                chosenClass: "elegida",
+                handle: ".asa", //Que no deje agarrar el<li> por cualquier parte, sino solo por el asa
+                filter: ".fija", // si coincide con la clase "fija", no deja mover el elemento, lo bloquea
+                onFilter: (evt) => {//evento que se dispara cuando se intenta mover un elemento filtrado
+                    const item = evt.item; // el elemento que intentaron mover
+                    item.classList.add("error-mover"); // lo ponemos rojo
+
+                    setTimeout(() => {//ejecuta una accion despues de que pase un tiempo
+                        item.classList.remove("error-mover"); // y medio segundo despues, se lo quitamos
+                    }, 500);
+                },
+                onEnd: (evt) => { //onEnd es como el addEventListener, funciona al final de un arrastre
+                    console.log("Actividad:", evt.item.textContent);
+                    console.log("De:", evt.from.id, "posición", evt.oldIndex);
+                    console.log("A:", evt.to.id, "posición", evt.newIndex);
+                    actualizarHoras();
+
+                    // Si la lista de origen es distinta a la de destino, significa que cambio de columna
+                    if (evt.from.id !== evt.to.id) {
+                        const mensaje = document.getElementById("mensaje");
+                        mensaje.textContent = `${evt.item.textContent} quedó para el ${evt.to.id}`;
+                    }
+                }
+            });
+        });
+        actualizarHoras();
+    </script>
+</body>
+</html>
